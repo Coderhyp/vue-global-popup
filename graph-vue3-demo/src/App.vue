@@ -1,7 +1,7 @@
 <script setup>
 // import ForceGraph from "./components/ForceGraph.vue";
 import { useUserFormDialog } from "./hooks/useGlobalPopup/popup-registry";
-
+import GlobalPopupContainer from "./hooks/useGlobalPopup/components/GlobalPopupContainer.vue";
 const { show } = useUserFormDialog();
 
 show();
@@ -11,6 +11,7 @@ show();
 <template>
   <div>
     <button @click="show">Show User Form Dialog</button>
+    <GlobalPopupContainer />
   </div>
 </template>
 
