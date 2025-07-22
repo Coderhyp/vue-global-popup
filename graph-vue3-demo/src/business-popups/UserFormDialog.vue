@@ -37,7 +37,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-  close: [result?: any];
+  confirm: [result?: any];
   cancel: [reason?: any];
 }>();
 
@@ -55,20 +55,6 @@ const rules: FormRules = {
       min: 2,
       max: 20,
       message: "用户名长度在 2 到 20 个字符",
-      trigger: "blur",
-    },
-  ],
-  email: [
-    { required: true, message: "请输入邮箱", trigger: "blur" },
-    { type: "email", message: "请输入正确的邮箱格式", trigger: "blur" },
-  ],
-  age: [
-    { required: true, message: "请输入年龄", trigger: "blur" },
-    {
-      type: "number",
-      min: 1,
-      max: 120,
-      message: "年龄必须在 1 到 120 之间",
       trigger: "blur",
     },
   ],
@@ -94,7 +80,7 @@ const handleConfirm = async () => {
 
   try {
     await formRef.value.validate();
-    emit("close", { ...formData });
+    emit("confirm", { ...formData });
   } catch (error) {
     console.error("表单验证失败:", error);
   }

@@ -1,8 +1,7 @@
-import { registerPopups } from "./core/popup-managers";
-import { createPopupHook } from "./composables/useGlobalPopup";
+import { registerPopups } from "../hooks/useGlobalPopup/core/popup-managers";
+import { createPopupHook } from "../hooks/useGlobalPopup/composables/useGlobalPopup";
+import UserFormDialog from "./UserFormDialog.vue";
 
-// 导入所有业务弹窗组件
-import UserFormDialog from "./components/UserFormDialog.vue";
 // 弹窗配置
 const POPUP_CONFIGS = {
   "user-form": {

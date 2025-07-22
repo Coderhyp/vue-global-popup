@@ -1,0 +1,16 @@
+import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
+import GlobalPopupContainer from "../hooks/useGlobalPopup/components/GlobalPopupContainer.vue";
+import RiskRelation from "../views/risk-relation/RiskRelation.vue";
+
+const routes: Array<RouteRecordRaw> = [
+  { path: "/riskRelation", component: RiskRelation },
+  { path: "/business-popups", component: GlobalPopupContainer },
+  { path: "/", redirect: "/riskRelation" },
+];
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+});
+
+export default router;
