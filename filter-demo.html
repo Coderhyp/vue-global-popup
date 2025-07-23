@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AntV G6 v5 节点筛选功能</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/antv-g6/5.0.22/g6.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      .controls {
+        padding: 20px;
+        background: #fafafa;
+        border-bottom: 1px solid #e8e8e8;
+      }
+      .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 15px;
+      }
+      .filter-group label {
+        font-weight: bold;
+        color: #333;
+        min-width: 80px;
+      }
+      .checkbox-group {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+      .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        background: white;
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+      .checkbox-item:hover {
+        background: #f0f0f0;
+        border-color: #40a9ff;
+      }
+      .checkbox-item.checked {
+        background: #e6f7ff;
+        border-color: #1890ff;
+        color: #1890ff;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+      }
+      .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+      }
+      .btn-primary {
+        background: #1890ff;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #40a9ff;
+      }
+      .btn-secondary {
+        background: #f5f5f5;
+        color: #333;
+        border: 1px solid #d9d9d9;
+      }
+      .btn-secondary:hover {
+        background: #e6f7ff;
+        border-color: #40a9ff;
+      }
+      .graph-container {
+        height: 600px;
+        background: white;
+      }
+      .stats {
+        padding: 15px 20px;
+        background: #f9f9f9;
+        color: #666;
+        font-size: 14px;
+        border-top: 1px solid #e8e8e8;
+      }
+      .stats-item {
+        display: inline-block;
+        margin-right: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>AntV G6 v5 节点筛选功能演示</h1>
+        <p>根据类型条件动态筛选图中的节点和边</p>
+      </div>
+
+      <div class="controls">
+        <div class="filter-group">
+          <label>筛选类型:</label>
+          <div class="checkbox-group" id="typeFilters">
+            <div class="checkbox-item checked" data-type="a">
+              <input type="checkbox" checked />
+              <span>类型 A</span>
+            </div>
+            <div class="checkbox-item checked" data-type="b">
+              <input type="checkbox" checked />
+              <span>类型 B</span>
+            </div>
+            <div class="checkbox-item checked" data-type="c">
+              <input type="checkbox" checked />
+              <span>类型 C</span>
+            </div>
+            <div class="checkbox-item" data-type="d">
+              <input type="checkbox" />
+              <span>类型 D</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button class="btn btn-primary" onclick="applyFilter()">
+            应用筛选
+          </button>
+          <button class="btn btn-secondary" onclick="resetFilter()">
+            重置
+          </button>
+          <button class="btn btn-secondary" onclick="generateRandomData()">
+            生成随机数据
+          </button>
+        </div>
+      </div>
+
+      <div class="graph-container" id="graphContainer"></div>
+
+      <div class="stats">
+        <span class="stats-item">节点数量: <span id="nodeCount">0</span></span>
+        <span class="stats-item">边数量: <span id="edgeCount">0</span></span>
+        <span class="stats-item"
+          >已筛选节点: <span id="filteredNodeCount">0</span></span
+        >
+        <span class="stats-item"
+          >已筛选边: <span id="filteredEdgeCount">0</span></span
+        >
+      </div>
+    </div>
+
+    <script>
+      // 原始数据
+      let originalData = {
+        nodes: [
+          {
+            id: "node1",
+            nodeType: "user",
+            display: "用户A",
+            profilePath: "/profile/1",
+          },
+          {
+            id: "node2",
+            nodeType: "system",
+            display: "系统B",
+            profilePath: "/profile/2",
+          },
+          {
+            id: "node3",
+            nodeType: "user",
+            display: "用户C",
+            profilePath: "/profile/3",
+          },
+          {
+            id: "node4",
+            nodeType: "admin",
+            display: "管理员D",
+            profilePath: "/profile/4",
+          },
+          {
+            id: "node5",
+            nodeType: "user",
+            display: "用户E",
+            profilePath: "/profile/5",
+          },
+          {
+            id: "node6",
+            nodeType: "system",
+            display: "系统F",
+            profilePath: "/profile/6",
+          },
+        ],
+        edges: [
+          {
+            source: "node1",
+            target: "node2",
+            detail: [
+              { typeCode: "a", typeName: "类型A关系" },
+              { typeCode: "b", typeName: "类型B关系" },
+            ],
+          },
+          {
+            source: "node2",
+            target: "node3",
+            detail: [
+              { typeCode: "b", typeName: "类型B关系" },
+              { typeCode: "c", typeName: "类型C关系" },
+            ],
+          },
+          {
+            source: "node3",
+            target: "node4",
+            detail: [
+              { typeCode: "c", typeName: "类型C关系" },
+              { typeCode: "d", typeName: "类型D关系" },
+            ],
+          },
+          {
+            source: "node1",
+            target: "node4",
+            detail: [
+              { typeCode: "a", typeName: "类型A关系" },
+              { typeCode: "d", typeName: "类型D关系" },
+            ],
+          },
+          {
+            source: "node2",
+            target: "node5",
+            detail: [{ typeCode: "b", typeName: "类型B关系" }],
+          },
+          {
+            source: "node4",
+            target: "node6",
+            detail: [{ typeCode: "d", typeName: "类型D关系" }],
+          },
+          {
+            source: "node5",
+            target: "node6",
+            detail: [
+              { typeCode: "a", typeName: "类型A关系" },
+              { typeCode: "c", typeName: "类型C关系" },
+            ],
+          },
+        ],
+      };
+
+      let graph;
+      let currentData = JSON.parse(JSON.stringify(originalData));
+
+      // 初始化图
+      function initGraph() {
+        const container = document.getElementById("graphContainer");
+
+        graph = new G6.Graph({
+          container,
+          width: container.offsetWidth,
+          height: container.offsetHeight,
+          behavior: ["drag-canvas", "zoom-canvas", "drag-node"],
+          layout: {
+            type: "force",
+            preventOverlap: true,
+            nodeSize: 40,
+          },
+          node: {
+            size: 40,
+            style: {
+              fill: "#4A90E2",
+              stroke: "#2E5BBA",
+              lineWidth: 2,
+              labelText: (d) => d.id,
+            },
+          },
+          edge: {
+            style: {
+              lineWidth: 2,
+              labelText: (d) => {
+                return d.labelText || d.label;
+              },
+            },
+          },
+        });
+
+        // 处理数据格式
+        const processedData = processDataForG6(currentData);
+        graph.setData(processedData);
+        graph.render();
+        updateStats();
+      }
+
+      // 将数据转换为G6格式
+      function processDataForG6(data) {
+        return {
+          nodes: data.nodes.map((node) => ({
+            id: node.id,
+            label: node.display,
+            nodeType: node.nodeType,
+            profilePath: node.profilePath,
+            style: getNodeStyle(node.nodeType),
+          })),
+          edges: data.edges.map((edge, index) => ({
+            id: `edge-${index}`,
+            source: edge.source,
+            target: edge.target,
+            labelText: edge.labelText || "", // 使用计算后的labelText
+            detail: edge.detail,
+          })),
+        };
+      }
+
+      // 根据节点类型获取样式
+      function getNodeStyle(nodeType) {
+        const styles = {
+          user: { fill: "#52c41a", stroke: "#389e0d" },
+          system: { fill: "#1890ff", stroke: "#096dd9" },
+          admin: { fill: "#fa541c", stroke: "#d4380d" },
+          default: { fill: "#4A90E2", stroke: "#2E5BBA" },
+        };
+        return styles[nodeType] || styles.default;
+      }
+
+      // 核心筛选逻辑 - 使用G6 v5 数据操作API
+      function filterData(selectedTypes) {
+        // 1. 首先计算应该存在的边和节点
+        const shouldExistEdges = [];
+        const shouldExistNodeIds = new Set();
+
+        // 遍历原始数据，确定哪些边应该存在
+        originalData.edges.forEach((originalEdge, index) => {
+          if (!originalEdge.detail || originalEdge.detail.length === 0) {
+            return;
+          }
+
+          // 筛选出匹配选中类型的detail项
+          const matchedDetails = originalEdge.detail.filter((detail) =>
+            selectedTypes.includes(detail.typeCode)
+          );
+
+          if (matchedDetails.length > 0) {
+            // 生成标签文本
+            const labelText = matchedDetails
+              .map((detail) => detail.typeName)
+              .join(", ");
+
+            const edgeData = {
+              id: `edge-${index}`,
+              source: originalEdge.source,
+              target: originalEdge.target,
+              label: labelText,
+              detail: originalEdge.detail,
+              matchedDetails: matchedDetails,
+            };
+
+            shouldExistEdges.push(edgeData);
+
+            // 记录应该存在的节点
+            shouldExistNodeIds.add(originalEdge.source);
+            shouldExistNodeIds.add(originalEdge.target);
+          }
+        });
+
+        // 2. 获取当前图中的数据
+        const currentNodes = graph.getNodeData();
+        const currentEdges = graph.getEdgeData();
+
+        // 创建当前数据的索引
+        const currentEdgeMap = new Map();
+        const currentNodeMap = new Map();
+
+        currentEdges.forEach((edge) => {
+          currentEdgeMap.set(edge.id, edge);
+        });
+
+        currentNodes.forEach((node) => {
+          currentNodeMap.set(node.id, node);
+        });
+
+        // 3. 处理边的变化
+        const edgesToRemove = [];
+        const edgesToUpdate = [];
+        const edgesToAdd = [];
+
+        // 找出需要移除的边（当前存在但不应该存在的）
+        currentEdges.forEach((edge) => {
+          const shouldExist = shouldExistEdges.find((e) => e.id === edge.id);
+          if (!shouldExist) {
+            edgesToRemove.push(edge.id);
+          }
+        });
+
+        // 找出需要添加或更新的边
+        shouldExistEdges.forEach((shouldEdge) => {
+          const currentEdge = currentEdgeMap.get(shouldEdge.id);
+
+          if (currentEdge) {
+            // 边存在，检查是否需要更新标签
+            if (currentEdge.label !== shouldEdge.label) {
+              edgesToUpdate.push({
+                id: shouldEdge.id,
+                label: shouldEdge.label,
+              });
+            }
+          } else {
+            // 边不存在，需要添加
+            edgesToAdd.push(shouldEdge);
+          }
+        });
+
+        // 4. 处理节点的变化
+        const nodesToRemove = [];
+        const nodesToAdd = [];
+
+        // 找出需要移除的节点（当前存在但不应该存在的）
+        currentNodes.forEach((node) => {
+          if (!shouldExistNodeIds.has(node.id)) {
+            nodesToRemove.push(node.id);
+          }
+        });
+
+        // 找出需要添加的节点（应该存在但当前不存在的）
+        shouldExistNodeIds.forEach((nodeId) => {
+          if (!currentNodeMap.has(nodeId)) {
+            const originalNode = originalData.nodes.find(
+              (n) => n.id === nodeId
+            );
+            if (originalNode) {
+              nodesToAdd.push({
+                id: originalNode.id,
+                label: originalNode.display,
+                nodeType: originalNode.nodeType,
+                profilePath: originalNode.profilePath,
+                style: getNodeStyle(originalNode.nodeType),
+              });
+            }
+          }
+        });
+
+        // 5. 执行所有的数据操作
+        if (edgesToRemove.length > 0) {
+          graph.removeEdgeData(edgesToRemove);
+        }
+        if (nodesToRemove.length > 0) {
+          graph.removeNodeData(nodesToRemove);
+        }
+        if (nodesToAdd.length > 0) {
+          graph.addNodeData(nodesToAdd);
+        }
+        if (edgesToAdd.length > 0) {
+          graph.addEdgeData(edgesToAdd);
+        }
+        if (edgesToUpdate.length > 0) {
+          graph.updateEdgeData(edgesToUpdate);
+        }
+        graph.render();
+      }
+      // 核心筛选逻辑
+
+      // function filterData(selectedTypes) {
+      //     // 1. 首先计算应该存在的边和节点
+      //     const shouldExistEdges = [];
+      //     const shouldExistNodeIds = new Set();
+
+      //     // 遍历原始数据，确定哪些边应该存在
+      //     originalData.edges.forEach((originalEdge, index) => {
+      //         if (!originalEdge.detail || originalEdge.detail.length === 0) {
+      //             return;
+      //         }
+
+      //         // 筛选出匹配选中类型的detail项
+      //         const matchedDetails = originalEdge.detail.filter(detail =>
+      //             selectedTypes.includes(detail.typeCode)
+      //         );
+
+      //         if (matchedDetails.length > 0) {
+      //             // 生成标签文本
+      //             const labelText = matchedDetails.map(detail => detail.typeName).join(', ');
+
+      //             const edgeData = {
+      //                 id: `edge-${index}`,
+      //                 source: originalEdge.source,
+      //                 target: originalEdge.target,
+      //                 label: labelText,
+      //                 detail: originalEdge.detail,
+      //                 matchedDetails: matchedDetails
+      //             };
+
+      //             shouldExistEdges.push(edgeData);
+
+      //             // 记录应该存在的节点
+      //             shouldExistNodeIds.add(originalEdge.source);
+      //             shouldExistNodeIds.add(originalEdge.target);
+      //         }
+      //     });
+
+      //     // 2. 获取当前图中的数据
+      //     const currentNodes = graph.getNodeData();
+      //     const currentEdges = graph.getEdgeData();
+
+      //     // 创建当前数据的索引
+      //     const currentEdgeMap = new Map();
+      //     const currentNodeMap = new Map();
+
+      //     currentEdges.forEach(edge => {
+      //         currentEdgeMap.set(edge.id, edge);
+      //     });
+
+      //     currentNodes.forEach(node => {
+      //         currentNodeMap.set(node.id, node);
+      //     });
+
+      //     // 3. 处理边的变化
+      //     const edgesToRemove = [];
+      //     const edgesToUpdate = [];
+      //     const edgesToAdd = [];
+
+      //     // 找出需要移除的边（当前存在但不应该存在的）
+      //     currentEdges.forEach(edge => {
+      //         const shouldExist = shouldExistEdges.find(e => e.id === edge.id);
+      //         if (!shouldExist) {
+      //             edgesToRemove.push(edge.id);
+      //         }
+      //     });
+
+      //     // 找出需要添加或更新的边
+      //     shouldExistEdges.forEach(shouldEdge => {
+      //         const currentEdge = currentEdgeMap.get(shouldEdge.id);
+
+      //         if (currentEdge) {
+      //             // 边存在，检查是否需要更新标签
+      //             if (currentEdge.label !== shouldEdge.label) {
+      //                 edgesToUpdate.push({
+      //                     id: shouldEdge.id,
+      //                     label: shouldEdge.label
+      //                 });
+      //             }
+      //         } else {
+      //             // 边不存在，需要添加
+      //             edgesToAdd.push(shouldEdge);
+      //         }
+      //     });
+
+      //     // 4. 处理节点的变化
+      //     const nodesToRemove = [];
+      //     const nodesToAdd = [];
+
+      //     // 找出需要移除的节点（当前存在但不应该存在的）
+      //     currentNodes.forEach(node => {
+      //         if (!shouldExistNodeIds.has(node.id)) {
+      //             nodesToRemove.push(node.id);
+      //         }
+      //     });
+
+      //     // 找出需要添加的节点（应该存在但当前不存在的）
+      //     shouldExistNodeIds.forEach(nodeId => {
+      //         if (!currentNodeMap.has(nodeId)) {
+      //             const originalNode = originalData.nodes.find(n => n.id === nodeId);
+      //             if (originalNode) {
+      //                 nodesToAdd.push({
+      //                     id: originalNode.id,
+      //                     label: originalNode.display,
+      //                     nodeType: originalNode.nodeType,
+      //                     profilePath: originalNode.profilePath,
+      //                     style: getNodeStyle(originalNode.nodeType)
+      //                 });
+      //             }
+      //         }
+      //     });
+
+      //     // 5. 执行所有的数据操作
+      //     if (edgesToRemove.length > 0) {
+      //         graph.removeEdgeData(edgesToRemove);
+      //     }
+      //     if (nodesToRemove.length > 0) {
+      //         graph.removeNodeData(nodesToRemove);
+      //     }
+      //     if (nodesToAdd.length > 0) {
+      //         graph.addNodeData(nodesToAdd);
+      //     }
+      //     if (edgesToAdd.length > 0) {
+      //         graph.addEdgeData(edgesToAdd);
+      //     }
+      //     if (edgesToUpdate.length > 0) {
+      //         graph.updateEdgeData(edgesToUpdate);
+      //     }
+
+      //     // 6. 更新当前数据状态（用于统计显示）
+      //     updateCurrentDataState();
+      // }
+
+      // 更新当前数据状态的辅助函数
+
+      // 应用筛选
+      function applyFilter() {
+        const selectedTypes = getSelectedTypes();
+        filterData(selectedTypes);
+        updateStats();
+      }
+
+      // 获取选中的类型
+      function getSelectedTypes() {
+        const checkboxes = document.querySelectorAll(
+          "#typeFilters .checkbox-item"
+        );
+        const selectedTypes = [];
+
+        checkboxes.forEach((item) => {
+          const checkbox = item.querySelector('input[type="checkbox"]');
+          if (checkbox.checked) {
+            selectedTypes.push(item.dataset.type);
+          }
+        });
+
+        return selectedTypes;
+      }
+      // 重置筛选
+      function resetFilter() {
+        // 重置所有复选框为选中状态
+        const checkboxes = document.querySelectorAll(
+          "#typeFilters .checkbox-item"
+        );
+        checkboxes.forEach((item) => {
+          const checkbox = item.querySelector('input[type="checkbox"]');
+          checkbox.checked = true;
+          item.classList.add("checked");
+        });
+
+        currentData = JSON.parse(JSON.stringify(originalData));
+        const processedData = processDataForG6(currentData);
+        graph.setData(processedData);
+        updateStats();
+      }
+
+      // 生成随机数据
+      function generateRandomData() {
+        const nodeTypes = ["user", "system", "admin"];
+        const typeDetails = [
+          { typeCode: "a", typeName: "类型A关系" },
+          { typeCode: "b", typeName: "类型B关系" },
+          { typeCode: "c", typeName: "类型C关系" },
+          { typeCode: "d", typeName: "类型D关系" },
+        ];
+        const nodeCount = Math.floor(Math.random() * 8) + 5; // 5-12个节点
+
+        // 生成节点
+        const nodes = [];
+        for (let i = 1; i <= nodeCount; i++) {
+          nodes.push({
+            id: `node${i}`,
+            nodeType: nodeTypes[Math.floor(Math.random() * nodeTypes.length)],
+            display: `节点${i}`,
+            profilePath: `/profile/${i}`,
+          });
+        }
+
+        // 生成边
+        const edges = [];
+        const edgeCount = Math.floor(Math.random() * 12) + 5; // 5-16条边
+
+        for (let i = 0; i < edgeCount; i++) {
+          const source = nodes[Math.floor(Math.random() * nodes.length)].id;
+          let target = nodes[Math.floor(Math.random() * nodes.length)].id;
+
+          // 避免自环
+          while (target === source) {
+            target = nodes[Math.floor(Math.random() * nodes.length)].id;
+          }
+
+          // 避免重复边
+          const existingEdge = edges.find(
+            (e) =>
+              (e.source === source && e.target === target) ||
+              (e.source === target && e.target === source)
+          );
+
+          if (!existingEdge) {
+            const randomDetails = [];
+            const detailCount = Math.floor(Math.random() * 3) + 1; // 1-3个类型
+
+            // 随机选择不重复的类型详情
+            const shuffledDetails = [...typeDetails].sort(
+              () => 0.5 - Math.random()
+            );
+            for (
+              let j = 0;
+              j < Math.min(detailCount, shuffledDetails.length);
+              j++
+            ) {
+              randomDetails.push(shuffledDetails[j]);
+            }
+
+            edges.push({
+              source,
+              target,
+              detail: randomDetails,
+            });
+          }
+        }
+
+        originalData = { nodes, edges };
+        currentData = JSON.parse(JSON.stringify(originalData));
+
+        const processedData = processDataForG6(currentData);
+        graph.changeData(processedData);
+        updateStats();
+      }
+
+      // 更新统计信息
+      function updateStats() {
+        document.getElementById("nodeCount").textContent =
+          originalData.nodes.length;
+        document.getElementById("edgeCount").textContent =
+          originalData.edges.length;
+        document.getElementById("filteredNodeCount").textContent =
+          currentData.nodes.length;
+        document.getElementById("filteredEdgeCount").textContent =
+          currentData.edges.length;
+      }
+
+      // 复选框事件处理
+      document.addEventListener("DOMContentLoaded", function () {
+        const checkboxItems = document.querySelectorAll(
+          "#typeFilters .checkbox-item"
+        );
+
+        checkboxItems.forEach((item) => {
+          item.addEventListener("click", function () {
+            const checkbox = this.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            this.classList.toggle("checked", checkbox.checked);
+          });
+
+          // 防止点击checkbox时触发两次
+          const checkbox = item.querySelector('input[type="checkbox"]');
+          checkbox.addEventListener("click", function (e) {
+            e.stopPropagation();
+          });
+
+          checkbox.addEventListener("change", function () {
+            item.classList.toggle("checked", this.checked);
+          });
+        });
+
+        initGraph();
+      });
+
+      // 窗口大小改变时调整图的大小
+      window.addEventListener("resize", function () {
+        if (graph) {
+          const container = document.getElementById("graphContainer");
+          graph.changeSize(container.offsetWidth, container.offsetHeight);
+        }
+      });
+    </script>
+  </body>
+</html>
