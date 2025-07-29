@@ -1,5 +1,5 @@
 import { registerPopups } from "../hooks/useGlobalPopup/core/popup-managers";
-import { createPopupHook } from "../hooks/useGlobalPopup/composables/useGlobalPopup";
+import { createPopupHook } from "../hooks/useGlobalPopup/useGlobalPopup";
 import UserFormDialog from "./UserFormDialog.vue";
 
 // 弹窗配置

@@ -6,6 +6,7 @@ import GlobalPopupContainer from "./hooks/useGlobalPopup/components/GlobalPopupC
 <template>
   <div>
     <router-view />
+    <GlobalPopupContainer></GlobalPopupContainer>
   </div>
 </template>
 

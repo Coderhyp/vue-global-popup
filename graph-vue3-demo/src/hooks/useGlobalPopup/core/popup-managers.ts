@@ -95,7 +95,6 @@ export const showPopup = async (
 ): Promise<any> => {
   return new Promise((resolve, reject) => {
     let instance = popupCache.get(id);
-    console.log("-------", instance);
     if (!instance || options.destroyOnClose !== false) {
       instance = createPopupInstance(id, options, props);
       popupCache.set(id, instance);

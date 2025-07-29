@@ -4,8 +4,8 @@ import {
   closePopup,
   getPopupInstance,
   isPopupVisible,
-} from "../core/popup-managers";
-import type { PopupOptions } from "../types/popup";
+} from "./core/popup-managers";
+import type { PopupOptions } from "./types/popup";
 
 /**
  * 全局弹窗 Hook
