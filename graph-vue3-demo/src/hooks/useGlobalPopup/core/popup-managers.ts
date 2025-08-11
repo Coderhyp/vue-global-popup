@@ -1,4 +1,3 @@
-// core/popup-manager.ts
 import { ref, reactive, markRaw, nextTick } from "vue";
 import type {
   PopupInstance,

@@ -4,25 +4,7 @@
       v-for="popup in activePopups"
       :key="popup.id"
       v-model="popup.visible"
-      :title="popup.options.title"
-      :width="popup.options.width"
-      :fullscreen="popup.options.fullscreen"
-      :top="popup.options.top"
-      :modal="popup.options.modal"
-      :append-to-body="popup.options.appendToBody"
-      :lock-scroll="popup.options.lockScroll"
-      :custom-class="popup.options.customClass"
-      :open-delay="popup.options.openDelay"
-      :close-delay="popup.options.closeDelay"
-      :close-on-click-modal="popup.options.closeOnClickModal"
-      :close-on-press-escape="popup.options.closeOnPressEscape"
-      :show-close="popup.options.showClose"
-      :before-close="popup.options.beforeClose"
-      :center="popup.options.center"
-      :align-center="popup.options.alignCenter"
-      :destroy-on-close="popup.options.destroyOnClose"
-      :draggable="popup.options.draggable"
-      :overflow="popup.options.overflow"
+      v-bind="popup.options"
       @close="handleClose(popup.id)"
       @closed="handleClosed(popup.id)"
       @open="handleOpen(popup.id)"
@@ -36,6 +18,12 @@
         @confirm="handleConfirm(popup.id, $event)"
       />
     </el-dialog>
+    <!-- <el-drawer
+      v-for="popup in activePopups"
+      :key="popup.id"
+      v-model="popup.visible"
+      v-bind="popup.options"
+    /> -->
   </div>
 </template>
 
@@ -43,7 +31,9 @@
 import { getActivePopups, hidePopup, closePopup } from "../core/popup-managers";
 import type { PopupInstance } from "../types/popup";
 
-const activePopups = getActivePopups();
+const props = defineProps<{
+  activePopups: PopupInstance[];
+}>();
 
 // 事件处理
 const handleClose = (id: string) => {
@@ -53,11 +43,11 @@ const handleClose = (id: string) => {
 const handleClosed = (id: string) => {
   console.log(`Dialog ${id} has closed`);
   // 清理实例
-  const instance = activePopups.find((p) => p.id === id);
+  const instance = props.activePopups.find((p) => p.id === id);
   if (instance?.options.destroyOnClose) {
-    const index = activePopups.findIndex((p) => p.id === id);
+    const index = props.activePopups.findIndex((p) => p.id === id);
     if (index > -1) {
-      activePopups.splice(index, 1);
+      props.activePopups.splice(index, 1);
     }
   }
 };
@@ -79,21 +69,4 @@ const handleConfirm = (id: string, result?: any) => {
 };
 </script>
 
-<style scoped>
-.global-popup-container {
-  /* 可以在这里添加全局弹窗样式 */
-}
-
-/* 自定义 Element Plus Dialog 样式 */
-:deep(.el-dialog) {
-  /* 自定义样式 */
-}
-
-:deep(.el-dialog__header) {
-  /* 自定义头部样式 */
-}
-
-:deep(.el-dialog__body) {
-  /* 自定义内容样式 */
-}
-</style>
+<style scoped></style>
