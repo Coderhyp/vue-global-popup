@@ -16,6 +16,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",
+    "@vue/runtime-core": "^3.5.18",
+    "@vue/runtime-dom": "^3.5.18",
     "vite": "^7.0.0",
     "vite-plugin-vue-devtools": "^7.7.7"
   }

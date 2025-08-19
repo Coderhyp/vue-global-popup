@@ -11,14 +11,8 @@
         <el-input-number v-model="formData.age" :min="1" :max="120" />
       </el-form-item>
     </el-form>
-
-    <div class="dialog-footer">
-      <el-button @click="handleCancel">取消</el-button>
-      <el-button type="primary" @click="handleConfirm">确定</el-button>
-    </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, reactive, watch } from "vue";
 import type { FormInstance, FormRules } from "element-plus";

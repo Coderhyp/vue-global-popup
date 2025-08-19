@@ -20,6 +20,24 @@ export interface PopupOptions {
   draggable?: boolean;
   overflow?: boolean;
   props?: Record<string, any>;
+  // 新增：用于区分弹窗呈现形式
+  uiType?: "dialog" | "drawer";
+
+  // 新增：支持自定义 header 和 footer
+  header?: {
+    component?: any; // 自定义 header 组件
+    props?: Record<string, any>; // header 组件的 props
+    slot?: string; // 插槽名称
+    show?: boolean; // 是否显示 header
+  };
+  footer?: {
+    component?: any; // 自定义 footer 组件
+    props?: Record<string, any>; // footer 组件的 props
+    slot?: string; // 插槽名称
+    show?: boolean; // 是否显示 footer
+  };
+  // 支持完全自定义模板
+  customTemplate?: boolean; // 是否使用完全自定义模板
 }
 
 export interface PopupInstance {

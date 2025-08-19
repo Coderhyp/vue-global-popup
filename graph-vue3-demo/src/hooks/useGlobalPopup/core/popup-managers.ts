@@ -10,7 +10,13 @@ const popupCache = new Map<string, PopupInstance>();
 // 弹窗注册表
 const popupRegistry: PopupRegistry = {};
 // 当前活跃的弹窗实例
-const activePopups = reactive<PopupInstance[]>([]);
+const activePopups = reactive<{
+  dialog: PopupInstance[];
+  drawer: PopupInstance[];
+}>({
+  dialog: [],
+  drawer: [],
+});
 // 全局配置
 const globalConfig = reactive({
   modal: true,
@@ -25,7 +31,21 @@ const globalConfig = reactive({
   alignCenter: false,
   width: "50%",
   top: "15vh",
+  uiType: "dialog" as "dialog" | "drawer",
 });
+
+// 根据 uiType 获取对应的活跃列表
+const getActiveListByType = (uiType?: "dialog" | "drawer") => {
+  return uiType === "drawer" ? activePopups.drawer : activePopups.dialog;
+};
+
+// 从所有活跃列表中移除指定 id 的实例
+const removeFromAllActiveLists = (id: string) => {
+  (Object.values(activePopups) as PopupInstance[][]).forEach((list) => {
+    const index = list.findIndex((p) => p.id === id);
+    if (index > -1) list.splice(index, 1);
+  });
+};
 
 /**
  * 注册弹窗组件
@@ -93,6 +113,7 @@ export const showPopup = async (
   props: Record<string, any> = {}
 ): Promise<any> => {
   return new Promise((resolve, reject) => {
+    console.log("showPopup", id, options, props);
     let instance = popupCache.get(id);
     if (!instance || options.destroyOnClose !== false) {
       instance = createPopupInstance(id, options, props);
@@ -106,13 +127,14 @@ export const showPopup = async (
     instance.resolve = resolve;
     instance.reject = reject;
     instance.visible = true;
-
-    // 添加到活跃列表
-    const existingIndex = activePopups.findIndex((p) => p.id === id);
-    if (existingIndex > -1) {
-      activePopups.splice(existingIndex, 1);
-    }
-    activePopups.push(instance);
+    // 添加到活跃列表（按类型分类）
+    removeFromAllActiveLists(id);
+    const uiType = (instance.options as any).uiType as
+      | "dialog"
+      | "drawer"
+      | undefined;
+    const list = getActiveListByType(uiType);
+    list.push(instance);
   });
 };
 
@@ -126,10 +148,7 @@ export const hidePopup = (id: string, result?: any) => {
   instance.visible = false;
 
   // 从活跃列表中移除
-  const index = activePopups.findIndex((p) => p.id === id);
-  if (index > -1) {
-    activePopups.splice(index, 1);
-  }
+  removeFromAllActiveLists(id);
 
   // 解析 Promise
   if (instance.resolve) {
@@ -153,10 +172,8 @@ export const closePopup = (id: string, reason?: any) => {
 
   instance.visible = false;
 
-  const index = activePopups.findIndex((p) => p.id === id);
-  if (index > -1) {
-    activePopups.splice(index, 1);
-  }
+  // 从活跃列表中移除
+  removeFromAllActiveLists(id);
 
   if (instance.reject) {
     instance.reject(reason);
