@@ -3,50 +3,44 @@ import { createPopupHook } from "../hooks/useGlobalPopup/useGlobalPopup";
 import UserFormDialog from "./UserFormDialog.vue";
 import TestDialog from "./TestDialog.vue";
 import TestDrawer from "./TestDrawer.vue";
-import CustomHeaderComponent from "./CustomHeaderComponent.vue";
+import CustomHeaderDialog from "./CustomHeaderDialog.vue";
 
 // 弹窗配置
-const DIALOG_POPUP_CONFIGS = {
+const POPUP_CONFIGS = {
   "user-form": {
     component: UserFormDialog,
     defaultOptions: {
       title: "用户信息",
-      width: "600px",
-      closeOnClickModal: false,
-      draggable: true,
+      // UI相关的配置由组件自行处理
     },
   },
   "test-dialog": {
     component: TestDialog,
     defaultOptions: {
       title: "测试弹窗",
-      header: {
-        component: CustomHeaderComponent,
-        show: true,
-      },
     },
   },
-};
-const DRAWER_POPUP_CONFIGS = {
   "test-drawer": {
     component: TestDrawer,
     defaultOptions: {
-      title: "测试弹窗",
-      uiType: "drawer" as const,
+      title: "测试抽屉",
+      // UI相关的配置由组件自行处理
+    },
+  },
+  "custom-header-dialog": {
+    component: CustomHeaderDialog,
+    defaultOptions: {
+      title: "自定义弹窗",
+      // UI相关的配置由组件自行处理
     },
   },
 };
-const POPUP_CONFIGS = {
-  ...DIALOG_POPUP_CONFIGS,
-  ...DRAWER_POPUP_CONFIGS,
-};
+
 // 注册所有弹窗
 registerPopups(POPUP_CONFIGS);
 
 // 导出特定弹窗的 Hooks
-//  ----dialog----
 export const useUserFormDialog = createPopupHook("user-form");
-
 export const useTestDialog = createPopupHook("test-dialog");
-//  ----drawer----
 export const useTestDrawer = createPopupHook("test-drawer");
+export const useCustomHeaderDialog = createPopupHook("custom-header-dialog");

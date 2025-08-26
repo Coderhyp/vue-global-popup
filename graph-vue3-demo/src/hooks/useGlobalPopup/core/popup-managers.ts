@@ -10,42 +10,25 @@ const popupCache = new Map<string, PopupInstance>();
 // 弹窗注册表
 const popupRegistry: PopupRegistry = {};
 // 当前活跃的弹窗实例
-const activePopups = reactive<{
-  dialog: PopupInstance[];
-  drawer: PopupInstance[];
-}>({
-  dialog: [],
-  drawer: [],
-});
+const activePopups = reactive<PopupInstance[]>([]);
+
+// 事件绑定
+const bindPopupEvents = () => {};
 // 全局配置
+
+export function bindDefaultEvents(popId: string) {
+  return {
+    "@close": function () {
+      console.log("bindDefaultEvents", popId);
+      setTimeout(() => {
+        hidePopup(popId);
+      }, 300);
+    },
+  };
+}
 const globalConfig = reactive({
-  modal: true,
-  appendToBody: true,
-  lockScroll: true,
-  closeOnClickModal: true,
-  closeOnPressEscape: true,
-  showClose: true,
   destroyOnClose: true,
-  draggable: false,
-  center: false,
-  alignCenter: false,
-  width: "50%",
-  top: "15vh",
-  uiType: "dialog" as "dialog" | "drawer",
 });
-
-// 根据 uiType 获取对应的活跃列表
-const getActiveListByType = (uiType?: "dialog" | "drawer") => {
-  return uiType === "drawer" ? activePopups.drawer : activePopups.dialog;
-};
-
-// 从所有活跃列表中移除指定 id 的实例
-const removeFromAllActiveLists = (id: string) => {
-  (Object.values(activePopups) as PopupInstance[][]).forEach((list) => {
-    const index = list.findIndex((p) => p.id === id);
-    if (index > -1) list.splice(index, 1);
-  });
-};
 
 /**
  * 注册弹窗组件
@@ -89,20 +72,47 @@ const createPopupInstance = (
   }
 
   const finalOptions: PopupOptions = {
-    id,
     ...globalConfig,
     ...registry.defaultOptions,
     ...options,
+    ...props,
+    ...bindDefaultEvents(id),
   };
 
   return {
     id,
     component: registry.component,
-    options: finalOptions,
     visible: false,
-    props,
+    ...splitProps(finalOptions),
   };
 };
+
+export function isEvent(propName) {
+  const rule = /^@/;
+  return rule.test(propName);
+}
+
+// @click => click
+export function eventNameTransition(name) {
+  return name.replace("@", "");
+}
+
+// 拆分事件与属性
+export function splitProps(cmpProps) {
+  return Object.entries(cmpProps).reduce(
+    (acc, [propName, propValue]) => {
+      if (isEvent(propName)) {
+        // 自定义事件
+        acc.on[eventNameTransition(propName)] = propValue;
+      } else {
+        acc.props[propName] = propValue;
+      }
+
+      return acc;
+    },
+    { on: {}, props: {} }
+  );
+}
 
 /**
  * 显示弹窗
@@ -113,10 +123,10 @@ export const showPopup = async (
   props: Record<string, any> = {}
 ): Promise<any> => {
   return new Promise((resolve, reject) => {
-    console.log("showPopup", id, options, props);
     let instance = popupCache.get(id);
     if (!instance || options.destroyOnClose !== false) {
       instance = createPopupInstance(id, options, props);
+      console.log(instance, "_----_");
       popupCache.set(id, instance);
     } else {
       // 更新现有实例的属性
@@ -127,14 +137,10 @@ export const showPopup = async (
     instance.resolve = resolve;
     instance.reject = reject;
     instance.visible = true;
-    // 添加到活跃列表（按类型分类）
-    removeFromAllActiveLists(id);
-    const uiType = (instance.options as any).uiType as
-      | "dialog"
-      | "drawer"
-      | undefined;
-    const list = getActiveListByType(uiType);
-    list.push(instance);
+
+    // 添加到活跃列表
+    removeFromActiveList(id);
+    activePopups.push(instance);
   });
 };
 
@@ -148,7 +154,7 @@ export const hidePopup = (id: string, result?: any) => {
   instance.visible = false;
 
   // 从活跃列表中移除
-  removeFromAllActiveLists(id);
+  removeFromActiveList(id);
 
   // 解析 Promise
   if (instance.resolve) {
@@ -173,7 +179,7 @@ export const closePopup = (id: string, reason?: any) => {
   instance.visible = false;
 
   // 从活跃列表中移除
-  removeFromAllActiveLists(id);
+  removeFromActiveList(id);
 
   if (instance.reject) {
     instance.reject(reason);
@@ -183,6 +189,16 @@ export const closePopup = (id: string, reason?: any) => {
     nextTick(() => {
       popupCache.delete(id);
     });
+  }
+};
+
+/**
+ * 从活跃列表中移除弹窗
+ */
+const removeFromActiveList = (id: string) => {
+  const index = activePopups.findIndex((p) => p.id === id);
+  if (index > -1) {
+    activePopups.splice(index, 1);
   }
 };
 
