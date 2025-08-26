@@ -10,7 +10,7 @@ const POPUP_CONFIGS = {
   "user-form": {
     component: UserFormDialog,
     defaultOptions: {
-      title: "用户信息",
+      title: "用户信息22?",
       // UI相关的配置由组件自行处理
     },
   },

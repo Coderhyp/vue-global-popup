@@ -3,27 +3,74 @@
     <h1>弹窗系统演示</h1>
 
     <div class="demo-section">
-      <h2>基础弹窗</h2>
+      <h2>基础弹窗（Dialog）</h2>
       <el-button class="btn-modern" @click="showUserForm" type="primary">
         用户信息弹窗
       </el-button>
       <el-button class="btn-modern" @click="showTestDialog" type="success">
         测试弹窗(嵌套 drawer)
       </el-button>
-    </div>
-
-    <div class="demo-section">
-      <h2>抽屉弹窗</h2>
-      <el-button class="btn-modern" @click="showTestDrawer" type="warning">
-        测试抽屉
+      <el-button
+        class="btn-modern"
+        @click="showConfirmCancelDialog"
+        type="warning"
+      >
+        对话框：确认/取消回调
+      </el-button>
+      <el-button
+        class="btn-modern"
+        @click="showAsyncDialog"
+        type="primary"
+        plain
+      >
+        对话框：异步确认（2s）
       </el-button>
     </div>
 
     <div class="demo-section">
-      <h2>弹窗状态</h2>
+      <h2>抽屉弹窗（Drawer）</h2>
+      <el-button class="btn-modern" @click="showTestDrawer" type="warning">
+        测试抽屉
+      </el-button>
+      <el-button
+        class="btn-modern"
+        @click="showLeftDrawer"
+        type="primary"
+        plain
+      >
+        左侧抽屉（large）
+      </el-button>
+      <el-button
+        class="btn-modern"
+        @click="showRightDrawer"
+        type="success"
+        plain
+      >
+        右侧抽屉（small）
+      </el-button>
+    </div>
+
+    <div class="demo-section">
+      <h2>复用策略与状态</h2>
       <p>当前活跃弹窗数量: {{ activePopupCount }}</p>
       <el-button class="btn-modern" @click="refreshStatus" size="small">
         刷新状态
+      </el-button>
+      <el-button
+        class="btn-modern"
+        @click="showReusableDialog"
+        size="small"
+        type="success"
+      >
+        复用实例（destroyOnClose=false）
+      </el-button>
+      <el-button
+        class="btn-modern"
+        @click="showFreshDialog"
+        size="small"
+        type="primary"
+      >
+        每次新建（destroyOnClose=true）
       </el-button>
     </div>
 
@@ -37,6 +84,14 @@
       >
         关闭所有弹窗
       </el-button>
+      <el-button
+        class="btn-modern"
+        @click="openNested"
+        type="warning"
+        size="small"
+      >
+        打开嵌套（Dialog 内再开 Drawer）
+      </el-button>
     </div>
   </div>
 </template>
@@ -48,7 +103,11 @@ import {
   useTestDialog,
   useTestDrawer,
 } from "../business-popups/popup-registry";
-import { getActivePopups } from "../hooks/useGlobalPopup/core/popup-managers";
+import {
+  getActivePopups,
+  hidePopup,
+  closePopup,
+} from "../hooks/useGlobalPopup/core/popup-managers";
 
 // 弹窗 hooks
 const userFormDialog = useUserFormDialog();
@@ -64,9 +123,7 @@ const activePopupCount = computed(() => {
 const showUserForm = async () => {
   try {
     const result = await userFormDialog.show(
-      {
-        title: "用户信息表单展示",
-      },
+      {},
       {
         fullscreen: true,
         initialData: {
@@ -76,6 +133,12 @@ const showUserForm = async () => {
         },
         "@dataChange": (data) => {
           console.log("监听数据变化了", data);
+        },
+        "@confirm": (data) => {
+          console.log("确认: ", data);
+        },
+        "@cancel": () => {
+          console.log("取消");
         },
       }
     );
@@ -94,6 +157,10 @@ const showTestDialog = async () => {
       {
         message: "这是一个测试弹窗",
         timestamp: Date.now(),
+        "@opened": () => {
+          // 在对话框打开后，自动打开一个右侧抽屉
+          showRightDrawer();
+        },
       }
     );
     console.log("测试弹窗结果:", result);
@@ -119,6 +186,104 @@ const showTestDrawer = async () => {
   }
 };
 
+// 进阶示例：确认/取消
+const showConfirmCancelDialog = async () => {
+  try {
+    const result = await userFormDialog.show(
+      { title: "确认/取消演示" },
+      {
+        initialData: { username: "ConfirmUser" },
+        "@confirm": (payload) => console.log("onConfirm:", payload),
+        "@cancel": () => console.log("onCancel"),
+      }
+    );
+    console.log("resolved:", result);
+  } catch (e) {
+    console.log("rejected:", e);
+  }
+};
+
+// 异步确认（模拟 2s）
+const showAsyncDialog = async () => {
+  try {
+    const result = await userFormDialog.show(
+      { title: "异步确认（2s）" },
+      {
+        initialData: { username: "AsyncUser" },
+        "@confirm": async () => {
+          await new Promise((r) => setTimeout(r, 2000));
+          console.log("async confirm done");
+        },
+      }
+    );
+    console.log("async resolved:", result);
+  } catch (e) {
+    console.log("async rejected:", e);
+  }
+};
+
+// Drawer
+const showLeftDrawer = async () => {
+  try {
+    await testDrawer.show(
+      { title: "左侧抽屉" },
+      {
+        direction: "ltr",
+        size: "60%",
+        message: "左侧进入的大抽屉",
+      }
+    );
+  } catch {}
+};
+
+const showRightDrawer = async () => {
+  try {
+    await testDrawer.show(
+      { title: "右侧抽屉" },
+      {
+        direction: "rtl",
+        size: "30%",
+        message: "右侧进入的小抽屉",
+      }
+    );
+  } catch {}
+};
+
+// 复用策略演示
+const showReusableDialog = async () => {
+  try {
+    await userFormDialog.show({ title: "复用实例（destroyOnClose=false)" }, {
+      fullscreen: false,
+      // 让实例保留，下一次 show 复用并保留数据
+      destroyOnClose: false,
+      initialData: { username: "Reusable" },
+    } as any);
+  } catch {}
+};
+
+const showFreshDialog = async () => {
+  try {
+    await userFormDialog.show({ title: "每次新建（destroyOnClose=true）" }, {
+      fullscreen: false,
+      destroyOnClose: true,
+      initialData: { username: "Fresh" },
+    } as any);
+  } catch {}
+};
+
+// 嵌套演示：Dialog 内打开 Drawer
+const openNested = async () => {
+  try {
+    await testDialog.show(
+      { title: "父级 Dialog" },
+      {
+        message: "Dialog 打开后立即弹出 Drawer",
+        "@opened": () => showLeftDrawer(),
+      }
+    );
+  } catch {}
+};
+
 // 工具方法
 const refreshStatus = () => {
   // 状态会自动更新，这里只是触发重新计算
@@ -127,8 +292,9 @@ const refreshStatus = () => {
 
 const closeAllPopups = () => {
   const activePopups = getActivePopups();
-  activePopups.forEach((popup) => {
-    popup.visible = false;
+  activePopups.slice().forEach((popup) => {
+    // 统一使用 closePopup，调用方将收到 reject
+    closePopup(popup.id, "bulk-close");
   });
   console.log("所有弹窗已关闭");
 };

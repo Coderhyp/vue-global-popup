@@ -21,8 +21,13 @@ export interface PopupInstance {
   options: PopupOptions;
   visible: boolean;
   props: Record<string, any>;
+  on: Record<string, (...args: any[]) => void>;
   resolve?: (value?: any) => void;
   reject?: (reason?: any) => void;
+  waiters?: Array<{
+    resolve: (value?: any) => void;
+    reject: (reason?: any) => void;
+  }>;
 }
 
 export interface PopupRegistry {

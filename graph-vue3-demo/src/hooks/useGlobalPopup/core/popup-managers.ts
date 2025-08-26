@@ -12,14 +12,11 @@ const popupRegistry: PopupRegistry = {};
 // 当前活跃的弹窗实例
 const activePopups = reactive<PopupInstance[]>([]);
 
-// 事件绑定
-const bindPopupEvents = () => {};
 // 全局配置
 
 export function bindDefaultEvents(popId: string) {
   return {
     "@close": function () {
-      console.log("bindDefaultEvents", popId);
       setTimeout(() => {
         hidePopup(popId);
       }, 300);
@@ -72,19 +69,24 @@ const createPopupInstance = (
   }
 
   const finalOptions: PopupOptions = {
+    // 默认事件优先级最低（放最前，后续可覆盖）
+    ...bindDefaultEvents(id),
     ...globalConfig,
     ...registry.defaultOptions,
     ...options,
     ...props,
-    ...bindDefaultEvents(id),
-  };
+  } as PopupOptions;
+
+  const { on, props: cmpProps } = splitProps(finalOptions);
 
   return {
     id,
     component: registry.component,
     visible: false,
-    ...splitProps(finalOptions),
-  };
+    options: finalOptions,
+    props: cmpProps,
+    on,
+  } as PopupInstance;
 };
 
 export function isEvent(propName) {
@@ -102,8 +104,14 @@ export function splitProps(cmpProps) {
   return Object.entries(cmpProps).reduce(
     (acc, [propName, propValue]) => {
       if (isEvent(propName)) {
-        // 自定义事件
-        acc.on[eventNameTransition(propName)] = propValue;
+        // 自定义事件（仅接受函数）
+        if (typeof propValue === "function") {
+          acc.on[eventNameTransition(propName)] = propValue;
+        } else if (propValue != null) {
+          console.warn(
+            `[useGlobalPopup] Event prop "${propName}" expects a function, got ${typeof propValue}`
+          );
+        }
       } else {
         acc.props[propName] = propValue;
       }
@@ -124,16 +132,31 @@ export const showPopup = async (
 ): Promise<any> => {
   return new Promise((resolve, reject) => {
     let instance = popupCache.get(id);
-    if (!instance || options.destroyOnClose !== false) {
+
+    // 若无实例，或旧实例在关闭时会销毁（不复用），则创建新实例
+    if (!instance || instance.options?.destroyOnClose !== false) {
       instance = createPopupInstance(id, options, props);
-      console.log(instance, "_----_");
       popupCache.set(id, instance);
     } else {
-      // 更新现有实例的属性
-      instance.props = { ...instance.props, ...props };
-      instance.options = { ...instance.options, ...options };
+      // 复用实例：合并配置与属性，并允许调用方覆盖
+      const registry = popupRegistry[id];
+      const mergedOptions: PopupOptions = {
+        ...bindDefaultEvents(id),
+        ...globalConfig,
+        ...registry?.defaultOptions,
+        ...instance.options,
+        ...options,
+        ...props,
+      } as PopupOptions;
+      const { on, props: cmpProps } = splitProps(mergedOptions);
+      instance.options = mergedOptions;
+      instance.props = { ...instance.props, ...cmpProps };
+      instance.on = { ...instance.on, ...on };
     }
 
+    // 并发等待者收集（避免覆盖前一次的 resolve/reject）
+    if (!instance.waiters) instance.waiters = [];
+    instance.waiters.push({ resolve, reject });
     instance.resolve = resolve;
     instance.reject = reject;
     instance.visible = true;
@@ -154,10 +177,13 @@ export const hidePopup = (id: string, result?: any) => {
   instance.visible = false;
 
   // 从活跃列表中移除
-  removeFromActiveList(id);
+  // removeFromActiveList(id);
 
-  // 解析 Promise
-  if (instance.resolve) {
+  // 解析 Promise：优先批量解析 waiters
+  if (Array.isArray(instance.waiters) && instance.waiters.length > 0) {
+    instance.waiters.forEach((w) => w.resolve(result));
+    instance.waiters = [];
+  } else if (instance.resolve) {
     instance.resolve(result);
   }
 
@@ -181,7 +207,10 @@ export const closePopup = (id: string, reason?: any) => {
   // 从活跃列表中移除
   removeFromActiveList(id);
 
-  if (instance.reject) {
+  if (Array.isArray(instance.waiters) && instance.waiters.length > 0) {
+    instance.waiters.forEach((w) => w.reject(reason));
+    instance.waiters = [];
+  } else if (instance.reject) {
     instance.reject(reason);
   }
 
@@ -227,4 +256,26 @@ export const getPopupInstance = (id: string) => {
 export const isPopupVisible = (id: string) => {
   const instance = popupCache.get(id);
   return instance?.visible || false;
+};
+
+/**
+ * 取消注册并清理缓存
+ */
+export const unregisterPopup = (id: string) => {
+  delete popupRegistry[id];
+  const instance = popupCache.get(id);
+  if (instance && !instance.visible) {
+    popupCache.delete(id);
+  }
+};
+
+/**
+ * 清理缓存（可选条件）
+ */
+export const clearPopupCache = (predicate?: (p: PopupInstance) => boolean) => {
+  Array.from(popupCache.entries()).forEach(([key, inst]) => {
+    if (!inst.visible && (!predicate || predicate(inst))) {
+      popupCache.delete(key);
+    }
+  });
 };

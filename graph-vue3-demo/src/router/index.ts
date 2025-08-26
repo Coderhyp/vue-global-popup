@@ -5,7 +5,7 @@ import Popup from "@/views/Popup.vue";
 import PlayGround from "@/views/PlayGround.vue";
 
 const routes: Array<RouteRecordRaw> = [
-  { path: "/riskRelation", component: RiskRelation },
+  // { path: "/riskRelation", component: RiskRelation },
   { path: "/business-popups", component: Popup },
   { path: "/", component: PlayGround },
 ];

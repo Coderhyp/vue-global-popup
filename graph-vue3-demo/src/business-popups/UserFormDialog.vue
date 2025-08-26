@@ -5,8 +5,6 @@
     :before-close="handleBeforeClose"
     @close="handleClose"
     @closed="handleClosed"
-    @open="handleOpen"
-    @opened="handleOpened"
   >
     <div class="user-form-dialog">
       <el-form
